@@ -1,0 +1,14 @@
+{
+  "name": "design-critique-ai",
+  "version": "1.0.0",
+  "description": "A Figma plugin that uses Claude AI to provide structured design critiques on selected frames and components.",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.96.0",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Design Critique AI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --surface: #f5f5f5;
+      --surface-2: #ebebeb;
+      --border: #e0e0e0;
+      --text: #1a1a1a;
+      --text-secondary: #666666;
+      --text-tertiary: #999999;
+      --accent: #0d99ff;
+      --accent-hover: #0b85e0;
+      --danger: #f24822;
+      --danger-hover: #d93d1c;
+      --success: #14ae5c;
+      --warning: #ffcd29;
+      --radius: 6px;
+      --font: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      font-size: 12px;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* ── Layout ── */
+    .plugin-wrap {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .header {
+      padding: 12px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .header-subtitle {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* ── API Key Section ── */
+    .api-section {
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .api-toggle {
+      width: 100%;
+      padding: 10px 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .api-toggle:hover { background: var(--surface-2); }
+
+    .api-toggle-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .api-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    .api-status-dot.active { background: var(--success); }
+    .api-status-dot.missing { background: var(--danger); }
+
+    .chevron {
+      transition: transform 0.15s;
+      color: var(--text-tertiary);
+      font-size: 10px;
+    }
+
+    .api-section.open .chevron { transform: rotate(180deg); }
+
+    .api-body {
+      display: none;
+      padding: 0 12px 12px;
+    }
+
+    .api-section.open .api-body { display: block; }
+
+    .api-key-display {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      word-break: break-all;
+    }
+
+    /* ── Form ── */
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    input[type="password"],
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .input-row input { flex: 1; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 7px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--font);
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover:not(:disabled) { background: #ddd; }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    .btn-danger:hover:not(:disabled) { background: #fff0ee; }
+
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* ── Selection Info ── */
+    .selection-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+
+    .selection-empty {
+      text-align: center;
+      color: var(--text-tertiary);
+      padding: 16px 0;
+    }
+
+    .selection-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .selection-meta {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .meta-tag {
+      font-size: 11px;
+      color: var(--text-secondary);
+      background: var(--surface-2);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    /* ── Critique Options ── */
+    .options-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .radio-btn {
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      background: var(--bg);
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .radio-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .radio-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ── Analyze Button ── */
+    .analyze-btn {
+      width: 100%;
+      padding: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius);
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: background 0.15s, opacity 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .analyze-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    .loading .spinner { display: block; }
+    .loading .btn-icon { display: none; }
+
+    /* ── Results ── */
+    .results {
+      display: none;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .results.visible { display: block; }
+
+    .results-header {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .results-title {
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .results-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .results-body {
+      padding: 12px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    /* ── Markdown Rendering ── */
+    .critique-content h2 {
+      font-size: 12px;
+      font-weight: 700;
+      margin: 12px 0 6px;
+      color: var(--text);
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .critique-content h2:first-child { margin-top: 0; }
+
+    .critique-content h3 {
+      font-size: 11px;
+      font-weight: 600;
+      margin: 8px 0 4px;
+      color: var(--text);
+    }
+
+    .critique-content p {
+      font-size: 12px;
+      color: var(--text);
+      margin-bottom: 6px;
+      line-height: 1.55;
+    }
+
+    .critique-content ul,
+    .critique-content ol {
+      margin: 4px 0 8px 14px;
+    }
+
+    .critique-content li {
+      font-size: 12px;
+      color: var(--text);
+      margin-bottom: 3px;
+      line-height: 1.5;
+    }
+
+    .critique-content strong { font-weight: 600; color: var(--text); }
+
+    .critique-content .severity-critical { color: var(--danger); font-weight: 600; }
+    .critique-content .severity-improvement { color: #cc8500; font-weight: 600; }
+    .critique-content .severity-suggestion { color: var(--success); font-weight: 600; }
+
+    .critique-content code {
+      background: var(--surface-2);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-family: monospace;
+    }
+
+    /* ── Error ── */
+    .error-banner {
+      display: none;
+      padding: 8px 12px;
+      background: #fff0ee;
+      border: 1px solid #ffc7bd;
+      border-radius: var(--radius);
+      font-size: 11px;
+      color: var(--danger);
+    }
+
+    .error-banner.visible { display: block; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #ccc; }
+  </style>
+</head>
+<body>
+<div class="plugin-wrap">
+  <div class="header">
+    <div>
+      <div class="header-title">Design Critique AI</div>
+      <div class="header-subtitle">Powered by Claude</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- API Key Section -->
+    <div class="api-section" id="apiSection">
+      <button class="api-toggle" id="apiToggle" onclick="toggleApiSection()">
+        <span class="api-toggle-left">
+          <span class="api-status-dot missing" id="apiStatusDot"></span>
+          <span id="apiToggleLabel">Set Anthropic API Key</span>
+        </span>
+        <span class="chevron">▼</span>
+      </button>
+      <div class="api-body" id="apiBody">
+        <div id="apiKeyDisplay" class="api-key-display" style="display:none;"></div>
+        <div style="margin-bottom: 8px;">
+          <label for="apiKeyInput">Your Anthropic API Key</label>
+          <div class="input-row">
+            <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" />
+            <button class="btn btn-primary" onclick="saveApiKey()">Save</button>
+          </div>
+          <p style="font-size: 10px; color: var(--text-tertiary); margin-top: 5px;">
+            Stored locally on your machine. Never sent to our servers.<br>
+            Get your key at <strong>console.anthropic.com</strong>
+          </p>
+        </div>
+        <button class="btn btn-danger" style="font-size:11px; padding: 5px 10px;" id="deleteKeyBtn" onclick="deleteApiKey()" style="display:none;">
+          Remove saved key
+        </button>
+      </div>
+    </div>
+
+    <!-- Selection Info -->
+    <div class="selection-card" id="selectionCard">
+      <div class="selection-empty" id="selectionEmpty">
+        Select a frame or component in Figma to begin
+      </div>
+      <div id="selectionInfo" style="display:none;">
+        <div class="selection-name" id="selectionName"></div>
+        <div class="selection-meta" id="selectionMeta"></div>
+      </div>
+    </div>
+
+    <!-- Critique Options -->
+    <div class="options-row">
+      <label>Focus</label>
+      <div class="radio-group" id="focusGroup">
+        <div class="radio-btn active" data-value="auto" onclick="setFocus(this)">Auto-detect</div>
+        <div class="radio-btn" data-value="ux" onclick="setFocus(this)">UI/UX</div>
+        <div class="radio-btn" data-value="visual" onclick="setFocus(this)">Visual</div>
+        <div class="radio-btn" data-value="architecture" onclick="setFocus(this)">Architecture</div>
+      </div>
+    </div>
+
+    <!-- Error Banner -->
+    <div class="error-banner" id="errorBanner"></div>
+
+    <!-- Analyze Button -->
+    <button class="analyze-btn" id="analyzeBtn" onclick="runCritique()" disabled>
+      <span class="btn-icon">✦</span>
+      <div class="spinner"></div>
+      <span id="analyzeBtnLabel">Critique this design</span>
+    </button>
+
+    <!-- Results -->
+    <div class="results" id="resultsSection">
+      <div class="results-header">
+        <span class="results-title">Critique</span>
+        <div class="results-actions">
+          <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick="copyResults()">Copy</button>
+          <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick="clearResults()">Clear</button>
+        </div>
+      </div>
+      <div class="results-body">
+        <div class="critique-content" id="critiqueContent"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+
+  let apiKey = '';
+  let currentSelection = null;
+  let currentFocus = 'auto';
+  let isLoading = false;
+
+  // ── System Prompt ──────────────────────────────────────────────────────────
+
+  const SYSTEM_PROMPT = `You are an expert design critic with deep knowledge of UI/UX design, visual design, and software architecture. You provide structured, actionable, and prioritized design critiques.
+
+When given design data extracted from a Figma file, you analyze it across relevant dimensions and structure your feedback in three tiers:
+
+## Critical Issues (Must Fix)
+Issues that block usability, violate accessibility standards, or create serious problems.
+
+## Improvements (Should Fix)
+Issues that reduce quality, consistency, or clarity.
+
+## Suggestions (Nice to Have)
+Enhancements that would polish or elevate the design.
+
+Always:
+- Be specific — name the exact element or property
+- Explain WHY something is a problem
+- Provide HOW to fix it
+- Cite standards when relevant (WCAG 2.1 AA, 8px grid, etc.)
+- Keep feedback concise and scannable
+- Use **bold** for issue names
+- Acknowledge what works well at the start
+
+Format your response using markdown headings (##) and bullet points. Keep the total response under 600 words.`;
+
+  // ── Figma Message Handling ─────────────────────────────────────────────────
+
+  window.onmessage = (event) => {
+    const msg = event.data.pluginMessage;
+    if (!msg) return;
+
+    switch (msg.type) {
+      case 'SELECTION_DATA':
+      case 'SELECTION_CHANGED':
+        currentSelection = msg.data;
+        updateSelectionUI(msg.data);
+        updateAnalyzeButton();
+        break;
+
+      case 'API_KEY_LOADED':
+        apiKey = msg.key || '';
+        updateApiKeyUI();
+        updateAnalyzeButton();
+        break;
+
+      case 'API_KEY_SAVED':
+        updateApiKeyUI();
+        updateAnalyzeButton();
+        closeApiSection();
+        break;
+
+      case 'API_KEY_DELETED':
+        apiKey = '';
+        updateApiKeyUI();
+        updateAnalyzeButton();
+        break;
+    }
+  };
+
+  // Request API key on load
+  parent.postMessage({ pluginMessage: { type: 'GET_API_KEY' } }, '*');
+
+  // ── UI Updates ─────────────────────────────────────────────────────────────
+
+  function updateSelectionUI(data) {
+    const empty = document.getElementById('selectionEmpty');
+    const info = document.getElementById('selectionInfo');
+    const name = document.getElementById('selectionName');
+    const meta = document.getElementById('selectionMeta');
+
+    if (!data || !data.hasSelection || data.nodes.length === 0) {
+      empty.style.display = 'block';
+      info.style.display = 'none';
+      return;
+    }
+
+    empty.style.display = 'none';
+    info.style.display = 'block';
+
+    if (data.nodes.length === 1) {
+      const node = data.nodes[0];
+      name.textContent = node.name;
+      const tags = [
+        node.type,
+        `${Math.round(node.width)} × ${Math.round(node.height)}`,
+      ];
+      if (node.layout && node.layout.mode !== 'NONE') tags.push('Auto Layout');
+      if (node.children) tags.push(`${node.children.length} children`);
+      meta.innerHTML = tags.map(t => `<span class="meta-tag">${t}</span>`).join('');
+    } else {
+      name.textContent = `${data.nodes.length} items selected`;
+      meta.innerHTML = `<span class="meta-tag">Multi-selection</span>`;
+    }
+  }
+
+  function updateApiKeyUI() {
+    const dot = document.getElementById('apiStatusDot');
+    const label = document.getElementById('apiToggleLabel');
+    const display = document.getElementById('apiKeyDisplay');
+    const input = document.getElementById('apiKeyInput');
+    const deleteBtn = document.getElementById('deleteKeyBtn');
+
+    if (apiKey) {
+      dot.className = 'api-status-dot active';
+      label.textContent = 'API Key configured';
+      display.style.display = 'block';
+      display.textContent = apiKey.slice(0, 10) + '••••••••' + apiKey.slice(-4);
+      input.value = '';
+      deleteBtn.style.display = 'inline-block';
+    } else {
+      dot.className = 'api-status-dot missing';
+      label.textContent = 'Set Anthropic API Key';
+      display.style.display = 'none';
+      deleteBtn.style.display = 'none';
+    }
+  }
+
+  function updateAnalyzeButton() {
+    const btn = document.getElementById('analyzeBtn');
+    const hasKey = !!apiKey;
+    const hasSelection = currentSelection && currentSelection.hasSelection;
+    btn.disabled = !hasKey || !hasSelection || isLoading;
+  }
+
+  // ── API Key Actions ────────────────────────────────────────────────────────
+
+  function toggleApiSection() {
+    document.getElementById('apiSection').classList.toggle('open');
+  }
+
+  function closeApiSection() {
+    document.getElementById('apiSection').classList.remove('open');
+  }
+
+  function saveApiKey() {
+    const input = document.getElementById('apiKeyInput');
+    const key = input.value.trim();
+    if (!key) return;
+    apiKey = key;
+    parent.postMessage({ pluginMessage: { type: 'SAVE_API_KEY', key } }, '*');
+  }
+
+  function deleteApiKey() {
+    apiKey = '';
+    parent.postMessage({ pluginMessage: { type: 'DELETE_API_KEY' } }, '*');
+  }
+
+  // ── Focus Selection ────────────────────────────────────────────────────────
+
+  function setFocus(el) {
+    document.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    currentFocus = el.dataset.value;
+  }
+
+  // ── Design Data Serialization ──────────────────────────────────────────────
+
+  function serializeNode(node, depth = 0) {
+    let text = `${'  '.repeat(depth)}[${node.type}] "${node.name}" — ${Math.round(node.width)}×${Math.round(node.height)}px`;
+
+    if (node.fills && node.fills.length > 0) {
+      const fills = node.fills
+        .filter(f => f.type === 'solid')
+        .map(f => f.hex + (f.opacity < 1 ? ` (${Math.round(f.opacity * 100)}%)` : ''))
+        .join(', ');
+      if (fills) text += `\n${'  '.repeat(depth + 1)}fills: ${fills}`;
+    }
+
+    if (node.layout && node.layout.mode !== 'NONE') {
+      const l = node.layout;
+      text += `\n${'  '.repeat(depth + 1)}layout: ${l.direction}, align: ${l.primaryAxisAlign}/${l.counterAxisAlign}, gap: ${l.itemSpacing}px, padding: ${l.paddingTop}/${l.paddingRight}/${l.paddingBottom}/${l.paddingLeft}px`;
+    }
+
+    if (node.typography) {
+      const t = node.typography;
+      text += `\n${'  '.repeat(depth + 1)}font: ${t.fontFamily} ${t.fontStyle} ${t.fontSize}px, line-height: ${t.lineHeight}, letter-spacing: ${t.letterSpacing}`;
+      text += `\n${'  '.repeat(depth + 1)}text: "${t.textContent}"`;
+    }
+
+    if (node.cornerRadius !== undefined && node.cornerRadius !== 0) {
+      text += `\n${'  '.repeat(depth + 1)}corner-radius: ${node.cornerRadius}`;
+    }
+
+    if (node.opacity < 1) {
+      text += `\n${'  '.repeat(depth + 1)}opacity: ${Math.round(node.opacity * 100)}%`;
+    }
+
+    if (node.children && node.children.length > 0) {
+      text += `\n${node.children.map(c => serializeNode(c, depth + 1)).join('\n')}`;
+    }
+
+    return text;
+  }
+
+  function buildPrompt(data, focus) {
+    const focusMap = {
+      auto: 'Analyze all relevant design dimensions: UI/UX, visual design, and structural choices.',
+      ux: 'Focus specifically on UI/UX: clarity, user flow, interactions, feedback states, accessibility.',
+      visual: 'Focus specifically on visual design: colors, typography, spacing, layout, visual hierarchy.',
+      architecture: 'Focus specifically on component architecture: naming, hierarchy, reusability, consistency with design system patterns.',
+    };
+
+    const nodesText = data.nodes.map(n => serializeNode(n)).join('\n\n');
+
+    return `Please critique the following Figma design.
+
+Focus: ${focusMap[focus] || focusMap.auto}
+
+## Design Data
+
+${nodesText}
+
+Provide a structured critique following your format.`;
+  }
+
+  // ── Run Critique ───────────────────────────────────────────────────────────
+
+  async function runCritique() {
+    if (isLoading || !apiKey || !currentSelection || !currentSelection.hasSelection) return;
+
+    setLoadingState(true);
+    hideError();
+    clearResults();
+
+    try {
+      const prompt = buildPrompt(currentSelection, currentFocus);
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1500,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        const msg = err.error?.message || `API error ${response.status}`;
+        throw new Error(msg);
+      }
+
+      const result = await response.json();
+      const text = result.content?.[0]?.text || '';
+      displayResults(text);
+    } catch (err) {
+      showError(err.message || 'Unexpected error. Please try again.');
+    } finally {
+      setLoadingState(false);
+    }
+  }
+
+  // ── Display ────────────────────────────────────────────────────────────────
+
+  function setLoadingState(loading) {
+    isLoading = loading;
+    const btn = document.getElementById('analyzeBtn');
+    const label = document.getElementById('analyzeBtnLabel');
+    btn.classList.toggle('loading', loading);
+    btn.disabled = loading;
+    label.textContent = loading ? 'Analyzing…' : 'Critique this design';
+  }
+
+  function displayResults(markdown) {
+    const section = document.getElementById('resultsSection');
+    const content = document.getElementById('critiqueContent');
+    section.classList.add('visible');
+    content.innerHTML = renderMarkdown(markdown);
+  }
+
+  function clearResults() {
+    const section = document.getElementById('resultsSection');
+    const content = document.getElementById('critiqueContent');
+    section.classList.remove('visible');
+    content.innerHTML = '';
+  }
+
+  function showError(msg) {
+    const banner = document.getElementById('errorBanner');
+    banner.textContent = '⚠ ' + msg;
+    banner.classList.add('visible');
+  }
+
+  function hideError() {
+    document.getElementById('errorBanner').classList.remove('visible');
+  }
+
+  function copyResults() {
+    const content = document.getElementById('critiqueContent');
+    const text = content.innerText;
+    navigator.clipboard.writeText(text).catch(() => {
+      // Fallback for sandboxed iframes
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+  }
+
+  // ── Markdown Renderer ──────────────────────────────────────────────────────
+
+  function renderMarkdown(md) {
+    let html = md
+      // Escape HTML
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      // Headers
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      // Bold
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      // Inline code
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // Lists
+      .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+      .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+      // Paragraphs (non-tag lines)
+      .replace(/^(?!<[hlu]|<\/[hlu]|<li)(.+)$/gm, '<p>$1</p>')
+      // Wrap consecutive <li> in <ul>
+      .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, (m) => `<ul>${m}</ul>`);
+
+    // Severity color classes
+    html = html
+      .replace(/<strong>(Critical Issues.*?)<\/strong>/g, '<strong class="severity-critical">$1</strong>')
+      .replace(/<strong>(Improvements.*?)<\/strong>/g, '<strong class="severity-improvement">$1</strong>')
+      .replace(/<strong>(Suggestions.*?)<\/strong>/g, '<strong class="severity-suggestion">$1</strong>');
+
+    return html;
+  }
+</script>
+</body>
+</html>

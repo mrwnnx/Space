@@ -1,0 +1,13 @@
+{
+  "name": "Design Critique AI",
+  "id": "design-critique-ai",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "src/ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["https://api.anthropic.com"],
+    "reasoning": "Required to call the Claude AI API to generate structured design critiques on selected frames and components."
+  }
+}
