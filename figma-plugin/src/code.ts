@@ -53,11 +53,13 @@ interface SelectionData {
 
 // ─── Color Helpers ────────────────────────────────────────────────────────────
 
+function pad2(n: number): string {
+  const s = n.toString(16);
+  return s.length === 1 ? '0' + s : s;
+}
+
 function rgbToHex(color: RGB): string {
-  const r = Math.round(color.r * 255).toString(16).padStart(2, '0');
-  const g = Math.round(color.g * 255).toString(16).padStart(2, '0');
-  const b = Math.round(color.b * 255).toString(16).padStart(2, '0');
-  return `#${r}${g}${b}`;
+  return `#${pad2(Math.round(color.r * 255))}${pad2(Math.round(color.g * 255))}${pad2(Math.round(color.b * 255))}`;
 }
 
 function extractPaints(paints: ReadonlyArray<Paint> | typeof figma.mixed): ColorInfo[] {
