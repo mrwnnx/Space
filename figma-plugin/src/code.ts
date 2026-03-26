@@ -175,7 +175,7 @@ function getSelectionData(): SelectionData {
 
 // ─── Message Handlers ─────────────────────────────────────────────────────────
 
-figma.ui.onmessage = async (msg: { type: string; key?: string }) => {
+figma.ui.onmessage = async (msg: { type: string; key?: string; url?: string }) => {
   switch (msg.type) {
     case 'GET_SELECTION': {
       const data = getSelectionData();
@@ -198,6 +198,24 @@ figma.ui.onmessage = async (msg: { type: string; key?: string }) => {
     case 'DELETE_API_KEY': {
       await figma.clientStorage.deleteAsync('anthropic_api_key');
       figma.ui.postMessage({ type: 'API_KEY_DELETED' });
+      break;
+    }
+
+    case 'SAVE_BACKEND_URL': {
+      await figma.clientStorage.setAsync('backend_url', msg.url ?? '');
+      figma.ui.postMessage({ type: 'BACKEND_URL_SAVED' });
+      break;
+    }
+
+    case 'GET_BACKEND_URL': {
+      const url = await figma.clientStorage.getAsync('backend_url');
+      figma.ui.postMessage({ type: 'BACKEND_URL_LOADED', url: url ?? '' });
+      break;
+    }
+
+    case 'DELETE_BACKEND_URL': {
+      await figma.clientStorage.deleteAsync('backend_url');
+      figma.ui.postMessage({ type: 'BACKEND_URL_DELETED' });
       break;
     }
 
