@@ -417,6 +417,54 @@
 
     .error-banner.visible { display: block; }
 
+    /* ── WordPress Status ── */
+    .wp-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      padding: 4px 0;
+    }
+
+    .wp-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      flex-shrink: 0;
+    }
+
+    .wp-status-dot.connected { background: var(--success); }
+
+    /* ── Publish Banner ── */
+    .publish-banner {
+      display: none;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      font-size: 11px;
+    }
+
+    .publish-banner.success {
+      background: #edfaf3;
+      border: 1px solid #a8e6c5;
+      color: #0d7a42;
+    }
+
+    .publish-banner.error {
+      background: #fff0ee;
+      border: 1px solid #ffc7bd;
+      color: var(--danger);
+    }
+
+    .publish-banner.visible { display: block; }
+
+    .publish-link {
+      color: inherit;
+      font-weight: 600;
+      text-decoration: underline;
+    }
+
     /* ── Scrollbar ── */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
@@ -463,6 +511,45 @@
       </div>
     </div>
 
+    <!-- WordPress Section -->
+    <div class="api-section" id="wpSection">
+      <button class="api-toggle" id="wpToggle" onclick="toggleWpSection()">
+        <span class="api-toggle-left">
+          <span class="wp-status-dot" id="wpStatusDot"></span>
+          <span id="wpToggleLabel">Connect WordPress</span>
+        </span>
+        <span class="chevron">▼</span>
+      </button>
+      <div class="api-body" id="wpBody">
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
+          <div>
+            <label for="wpUrlInput">Site URL</label>
+            <input type="text" id="wpUrlInput" placeholder="https://yoursite.com" autocomplete="off" />
+          </div>
+          <div>
+            <label for="wpUserInput">Username</label>
+            <input type="text" id="wpUserInput" placeholder="admin" autocomplete="off" />
+          </div>
+          <div>
+            <label for="wpPassInput">Application Password</label>
+            <div class="input-row">
+              <input type="password" id="wpPassInput" placeholder="xxxx xxxx xxxx xxxx" autocomplete="off" />
+              <button class="btn btn-primary" onclick="saveWpCredentials()">Save</button>
+            </div>
+          </div>
+          <p style="font-size: 10px; color: var(--text-tertiary);">
+            Generate an Application Password in WordPress → Users → Profile → Application Passwords.
+          </p>
+        </div>
+        <button class="btn btn-danger" style="font-size:11px; padding: 5px 10px;" id="deleteWpBtn" onclick="deleteWpCredentials()">
+          Disconnect WordPress
+        </button>
+      </div>
+    </div>
+
+    <!-- Publish Banner -->
+    <div class="publish-banner" id="publishBanner"></div>
+
     <!-- Selection Info -->
     <div class="selection-card" id="selectionCard">
       <div class="selection-empty" id="selectionEmpty">
@@ -500,6 +587,7 @@
       <div class="results-header">
         <span class="results-title">Critique</span>
         <div class="results-actions">
+          <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" id="publishBtn" onclick="publishToWordPress()" style="display:none;">Publish</button>
           <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick="copyResults()">Copy</button>
           <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px;" onclick="clearResults()">Clear</button>
         </div>
@@ -519,6 +607,7 @@
   let currentSelection = null;
   let currentFocus = 'auto';
   let isLoading = false;
+  let wpCredentials = null; // { url, username, appPassword }
 
   // ── System Prompt ──────────────────────────────────────────────────────────
 
@@ -577,11 +666,27 @@ Format your response using markdown headings (##) and bullet points. Keep the to
         updateApiKeyUI();
         updateAnalyzeButton();
         break;
+
+      case 'WP_CREDENTIALS_LOADED':
+        wpCredentials = msg.credentials || null;
+        updateWpUI();
+        break;
+
+      case 'WP_CREDENTIALS_SAVED':
+        updateWpUI();
+        closeWpSection();
+        break;
+
+      case 'WP_CREDENTIALS_DELETED':
+        wpCredentials = null;
+        updateWpUI();
+        break;
     }
   };
 
-  // Request API key on load
+  // Request API key and WP credentials on load
   parent.postMessage({ pluginMessage: { type: 'GET_API_KEY' } }, '*');
+  parent.postMessage({ pluginMessage: { type: 'GET_WP_CREDENTIALS' } }, '*');
 
   // ── UI Updates ─────────────────────────────────────────────────────────────
 
@@ -827,6 +932,113 @@ Provide a structured critique following your format.`;
       document.execCommand('copy');
       document.body.removeChild(ta);
     });
+  }
+
+  // ── WordPress ─────────────────────────────────────────────────────────────
+
+  function updateWpUI() {
+    const dot = document.getElementById('wpStatusDot');
+    const label = document.getElementById('wpToggleLabel');
+    const urlInput = document.getElementById('wpUrlInput');
+    const userInput = document.getElementById('wpUserInput');
+    const passInput = document.getElementById('wpPassInput');
+    const deleteBtn = document.getElementById('deleteWpBtn');
+    const publishBtn = document.getElementById('publishBtn');
+
+    if (wpCredentials && wpCredentials.url && wpCredentials.username && wpCredentials.appPassword) {
+      dot.className = 'wp-status-dot connected';
+      label.textContent = wpCredentials.url.replace(/^https?:\/\//, '');
+      urlInput.value = wpCredentials.url;
+      userInput.value = wpCredentials.username;
+      passInput.value = '';
+      deleteBtn.style.display = 'inline-block';
+      if (publishBtn) publishBtn.style.display = 'inline-block';
+    } else {
+      dot.className = 'wp-status-dot';
+      label.textContent = 'Connect WordPress';
+      deleteBtn.style.display = 'none';
+      if (publishBtn) publishBtn.style.display = 'none';
+    }
+  }
+
+  function toggleWpSection() {
+    document.getElementById('wpSection').classList.toggle('open');
+  }
+
+  function closeWpSection() {
+    document.getElementById('wpSection').classList.remove('open');
+  }
+
+  function saveWpCredentials() {
+    const url = document.getElementById('wpUrlInput').value.trim().replace(/\/$/, '');
+    const username = document.getElementById('wpUserInput').value.trim();
+    const appPassword = document.getElementById('wpPassInput').value.trim();
+    if (!url || !username || !appPassword) return;
+    wpCredentials = { url, username, appPassword };
+    parent.postMessage({ pluginMessage: { type: 'SAVE_WP_CREDENTIALS', credentials: wpCredentials } }, '*');
+  }
+
+  function deleteWpCredentials() {
+    wpCredentials = null;
+    parent.postMessage({ pluginMessage: { type: 'DELETE_WP_CREDENTIALS' } }, '*');
+  }
+
+  async function publishToWordPress() {
+    if (!wpCredentials) return;
+    const content = document.getElementById('critiqueContent');
+    if (!content || !content.innerHTML.trim()) return;
+
+    const publishBtn = document.getElementById('publishBtn');
+    publishBtn.disabled = true;
+    publishBtn.textContent = 'Publishing…';
+    hidePublishBanner();
+
+    const selectionName = (currentSelection && currentSelection.nodes && currentSelection.nodes[0])
+      ? currentSelection.nodes[0].name
+      : 'Design';
+    const title = `Design Critique – ${selectionName}`;
+
+    const token = btoa(wpCredentials.username + ':' + wpCredentials.appPassword);
+
+    try {
+      const response = await fetch(`${wpCredentials.url}/wp-json/wp/v2/posts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + token,
+        },
+        body: JSON.stringify({
+          title,
+          content: content.innerHTML,
+          status: 'draft',
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || `WordPress error ${response.status}`);
+      }
+
+      const post = await response.json();
+      showPublishBanner('success', `Draft saved! <a class="publish-link" href="${post.link}" target="_blank">View post</a>`);
+    } catch (err) {
+      showPublishBanner('error', '⚠ ' + (err.message || 'Failed to publish to WordPress.'));
+    } finally {
+      publishBtn.disabled = false;
+      publishBtn.textContent = 'Publish';
+    }
+  }
+
+  function showPublishBanner(type, html) {
+    const banner = document.getElementById('publishBanner');
+    banner.className = `publish-banner ${type} visible`;
+    banner.innerHTML = html;
+  }
+
+  function hidePublishBanner() {
+    const banner = document.getElementById('publishBanner');
+    banner.className = 'publish-banner';
+    banner.innerHTML = '';
   }
 
   // ── Markdown Renderer ──────────────────────────────────────────────────────

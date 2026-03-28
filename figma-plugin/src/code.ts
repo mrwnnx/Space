@@ -175,7 +175,13 @@ function getSelectionData(): SelectionData {
 
 // ─── Message Handlers ─────────────────────────────────────────────────────────
 
-figma.ui.onmessage = async (msg: { type: string; key?: string }) => {
+interface WordPressCredentials {
+  url: string;
+  username: string;
+  appPassword: string;
+}
+
+figma.ui.onmessage = async (msg: { type: string; key?: string; credentials?: WordPressCredentials }) => {
   switch (msg.type) {
     case 'GET_SELECTION': {
       const data = getSelectionData();
@@ -198,6 +204,28 @@ figma.ui.onmessage = async (msg: { type: string; key?: string }) => {
     case 'DELETE_API_KEY': {
       await figma.clientStorage.deleteAsync('anthropic_api_key');
       figma.ui.postMessage({ type: 'API_KEY_DELETED' });
+      break;
+    }
+
+    case 'SAVE_WP_CREDENTIALS': {
+      await figma.clientStorage.setAsync('wp_credentials', JSON.stringify(msg.credentials ?? {}));
+      figma.ui.postMessage({ type: 'WP_CREDENTIALS_SAVED' });
+      break;
+    }
+
+    case 'GET_WP_CREDENTIALS': {
+      const raw = await figma.clientStorage.getAsync('wp_credentials');
+      let credentials: WordPressCredentials | null = null;
+      if (raw) {
+        try { credentials = JSON.parse(raw as string); } catch { credentials = null; }
+      }
+      figma.ui.postMessage({ type: 'WP_CREDENTIALS_LOADED', credentials });
+      break;
+    }
+
+    case 'DELETE_WP_CREDENTIALS': {
+      await figma.clientStorage.deleteAsync('wp_credentials');
+      figma.ui.postMessage({ type: 'WP_CREDENTIALS_DELETED' });
       break;
     }
 
