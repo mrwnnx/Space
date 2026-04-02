@@ -7,7 +7,7 @@
   "editorType": ["figma"],
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": ["https://api.anthropic.com"],
-    "reasoning": "Required to call the Claude AI API to generate structured design critiques on selected frames and components."
+    "allowedDomains": ["https://api.anthropic.com", "https://api.figma.com"],
+    "reasoning": "Required to call the Claude AI API to generate structured design critiques on selected frames and components, and to call the Figma REST API to fetch rendered node images for visual analysis."
   }
 }

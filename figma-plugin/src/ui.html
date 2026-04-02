@@ -463,6 +463,34 @@
       </div>
     </div>
 
+    <!-- Figma Token Section -->
+    <div class="api-section" id="figmaTokenSection">
+      <button class="api-toggle" id="figmaToggle" onclick="toggleFigmaTokenSection()">
+        <span class="api-toggle-left">
+          <span class="api-status-dot" id="figmaStatusDot"></span>
+          <span id="figmaToggleLabel">Set Figma Access Token (optional)</span>
+        </span>
+        <span class="chevron">▼</span>
+      </button>
+      <div class="api-body" id="figmaTokenBody">
+        <div id="figmaTokenDisplay" class="api-key-display" style="display:none;"></div>
+        <div style="margin-bottom: 8px;">
+          <label for="figmaTokenInput">Figma Personal Access Token</label>
+          <div class="input-row">
+            <input type="password" id="figmaTokenInput" placeholder="figd_..." autocomplete="off" />
+            <button class="btn btn-primary" onclick="saveFigmaToken()">Save</button>
+          </div>
+          <p style="font-size: 10px; color: var(--text-tertiary); margin-top: 5px;">
+            Enables visual analysis by fetching rendered images of selected nodes.<br>
+            Get your token at <strong>figma.com/settings</strong> → Personal access tokens.
+          </p>
+        </div>
+        <button class="btn btn-danger" style="font-size:11px; padding: 5px 10px;" id="deleteFigmaTokenBtn" onclick="deleteFigmaToken()" style="display:none;">
+          Remove saved token
+        </button>
+      </div>
+    </div>
+
     <!-- Selection Info -->
     <div class="selection-card" id="selectionCard">
       <div class="selection-empty" id="selectionEmpty">
@@ -516,6 +544,8 @@
   // ── State ──────────────────────────────────────────────────────────────────
 
   let apiKey = '';
+  let figmaToken = '';
+  let figmaFileKey = '';
   let currentSelection = null;
   let currentFocus = 'auto';
   let isLoading = false;
@@ -577,11 +607,32 @@ Format your response using markdown headings (##) and bullet points. Keep the to
         updateApiKeyUI();
         updateAnalyzeButton();
         break;
+
+      case 'FIGMA_TOKEN_LOADED':
+        figmaToken = msg.key || '';
+        updateFigmaTokenUI();
+        break;
+
+      case 'FIGMA_TOKEN_SAVED':
+        updateFigmaTokenUI();
+        closeFigmaTokenSection();
+        break;
+
+      case 'FIGMA_TOKEN_DELETED':
+        figmaToken = '';
+        updateFigmaTokenUI();
+        break;
+
+      case 'FILE_KEY':
+        figmaFileKey = msg.key || '';
+        break;
     }
   };
 
-  // Request API key on load
+  // Request keys and file info on load
   parent.postMessage({ pluginMessage: { type: 'GET_API_KEY' } }, '*');
+  parent.postMessage({ pluginMessage: { type: 'GET_FIGMA_TOKEN' } }, '*');
+  parent.postMessage({ pluginMessage: { type: 'GET_FILE_KEY' } }, '*');
 
   // ── UI Updates ─────────────────────────────────────────────────────────────
 
@@ -668,6 +719,51 @@ Format your response using markdown headings (##) and bullet points. Keep the to
     parent.postMessage({ pluginMessage: { type: 'DELETE_API_KEY' } }, '*');
   }
 
+  // ── Figma Token Actions ────────────────────────────────────────────────────
+
+  function updateFigmaTokenUI() {
+    const dot = document.getElementById('figmaStatusDot');
+    const label = document.getElementById('figmaToggleLabel');
+    const display = document.getElementById('figmaTokenDisplay');
+    const input = document.getElementById('figmaTokenInput');
+    const deleteBtn = document.getElementById('deleteFigmaTokenBtn');
+
+    if (figmaToken) {
+      dot.className = 'api-status-dot active';
+      label.textContent = 'Figma token configured';
+      display.style.display = 'block';
+      display.textContent = figmaToken.slice(0, 10) + '••••••••' + figmaToken.slice(-4);
+      input.value = '';
+      deleteBtn.style.display = 'inline-block';
+    } else {
+      dot.className = 'api-status-dot';
+      label.textContent = 'Set Figma Access Token (optional)';
+      display.style.display = 'none';
+      deleteBtn.style.display = 'none';
+    }
+  }
+
+  function toggleFigmaTokenSection() {
+    document.getElementById('figmaTokenSection').classList.toggle('open');
+  }
+
+  function closeFigmaTokenSection() {
+    document.getElementById('figmaTokenSection').classList.remove('open');
+  }
+
+  function saveFigmaToken() {
+    const input = document.getElementById('figmaTokenInput');
+    const key = input.value.trim();
+    if (!key) return;
+    figmaToken = key;
+    parent.postMessage({ pluginMessage: { type: 'SAVE_FIGMA_TOKEN', key } }, '*');
+  }
+
+  function deleteFigmaToken() {
+    figmaToken = '';
+    parent.postMessage({ pluginMessage: { type: 'DELETE_FIGMA_TOKEN' } }, '*');
+  }
+
   // ── Focus Selection ────────────────────────────────────────────────────────
 
   function setFocus(el) {
@@ -738,6 +834,23 @@ Provide a structured critique following your format.`;
 
   // ── Run Critique ───────────────────────────────────────────────────────────
 
+  async function fetchFigmaImages(nodeIds) {
+    if (!figmaToken || !figmaFileKey || nodeIds.length === 0) return null;
+    try {
+      const ids = nodeIds.join(',');
+      const res = await fetch(
+        `https://api.figma.com/v1/images/${figmaFileKey}?ids=${encodeURIComponent(ids)}&scale=2&format=png`,
+        { headers: { 'X-Figma-Token': figmaToken } }
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.err) return null;
+      return data.images || null;
+    } catch {
+      return null;
+    }
+  }
+
   async function runCritique() {
     if (isLoading || !apiKey || !currentSelection || !currentSelection.hasSelection) return;
 
@@ -747,6 +860,24 @@ Provide a structured critique following your format.`;
 
     try {
       const prompt = buildPrompt(currentSelection, currentFocus);
+      const nodeIds = currentSelection.nodes.map(n => n.id);
+
+      // Fetch Figma node images if token is configured
+      const images = await fetchFigmaImages(nodeIds);
+
+      // Build message content
+      let userContent;
+      if (images) {
+        const imageBlocks = Object.values(images)
+          .filter(url => typeof url === 'string')
+          .map(url => ({ type: 'image', source: { type: 'url', url } }));
+        userContent = [
+          ...imageBlocks,
+          { type: 'text', text: prompt },
+        ];
+      } else {
+        userContent = prompt;
+      }
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -760,7 +891,7 @@ Provide a structured critique following your format.`;
           model: 'claude-sonnet-4-6',
           max_tokens: 1500,
           system: SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: prompt }],
+          messages: [{ role: 'user', content: userContent }],
         }),
       });
 

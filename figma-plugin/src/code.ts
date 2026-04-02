@@ -201,6 +201,29 @@ figma.ui.onmessage = async (msg: { type: string; key?: string }) => {
       break;
     }
 
+    case 'SAVE_FIGMA_TOKEN': {
+      await figma.clientStorage.setAsync('figma_access_token', msg.key ?? '');
+      figma.ui.postMessage({ type: 'FIGMA_TOKEN_SAVED' });
+      break;
+    }
+
+    case 'GET_FIGMA_TOKEN': {
+      const token = await figma.clientStorage.getAsync('figma_access_token');
+      figma.ui.postMessage({ type: 'FIGMA_TOKEN_LOADED', key: token ?? '' });
+      break;
+    }
+
+    case 'DELETE_FIGMA_TOKEN': {
+      await figma.clientStorage.deleteAsync('figma_access_token');
+      figma.ui.postMessage({ type: 'FIGMA_TOKEN_DELETED' });
+      break;
+    }
+
+    case 'GET_FILE_KEY': {
+      figma.ui.postMessage({ type: 'FILE_KEY', key: figma.fileKey ?? '' });
+      break;
+    }
+
     case 'CLOSE': {
       figma.closePlugin();
       break;
