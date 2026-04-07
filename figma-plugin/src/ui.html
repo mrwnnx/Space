@@ -404,6 +404,48 @@
       font-family: monospace;
     }
 
+    /* ── Figma URL Section ── */
+    .figma-url-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .figma-url-section label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .figma-url-badge {
+      font-size: 9px;
+      font-weight: 600;
+      background: #1abcfe22;
+      color: #0a8fc4;
+      border: 1px solid #1abcfe55;
+      padding: 1px 5px;
+      border-radius: 3px;
+      letter-spacing: 0.02em;
+    }
+
+    .figma-url-hint {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      margin-top: 2px;
+    }
+
+    .source-indicator {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      padding: 5px 8px;
+      background: var(--surface);
+      border-radius: 4px;
+      display: none;
+    }
+
+    .source-indicator.visible { display: block; }
+    .source-indicator.rest { color: #0a8fc4; background: #1abcfe11; }
+
     /* ── Error ── */
     .error-banner {
       display: none;
@@ -463,6 +505,46 @@
       </div>
     </div>
 
+    <!-- Figma Token Section -->
+    <div class="api-section" id="figmaSection">
+      <button class="api-toggle" id="figmaToggle" onclick="toggleFigmaSection()">
+        <span class="api-toggle-left">
+          <span class="api-status-dot" id="figmaStatusDot"></span>
+          <span id="figmaToggleLabel">Connect Figma API (optional)</span>
+        </span>
+        <span class="chevron">▼</span>
+      </button>
+      <div class="api-body" id="figmaBody">
+        <div id="figmaTokenDisplay" class="api-key-display" style="display:none;"></div>
+        <div style="margin-bottom: 8px;">
+          <label for="figmaTokenInput">Personal Access Token</label>
+          <div class="input-row">
+            <input type="password" id="figmaTokenInput" placeholder="figd_..." autocomplete="off" />
+            <button class="btn btn-primary" onclick="saveFigmaToken()">Save</button>
+          </div>
+          <p style="font-size: 10px; color: var(--text-tertiary); margin-top: 5px;">
+            Stored locally. Generate at <strong>figma.com → Account Settings → Security → Personal access tokens</strong>
+          </p>
+        </div>
+        <button class="btn btn-danger" style="font-size:11px; padding: 5px 10px; display:none;" id="deleteFigmaTokenBtn" onclick="deleteFigmaToken()">
+          Remove saved token
+        </button>
+      </div>
+    </div>
+
+    <!-- Figma URL Input (shown when Figma token is set) -->
+    <div class="figma-url-section" id="figmaUrlSection" style="display:none;">
+      <label for="figmaUrlInput">
+        Figma URL
+        <span class="figma-url-badge">REST API</span>
+      </label>
+      <input type="text" id="figmaUrlInput" placeholder="https://www.figma.com/design/…" oninput="onFigmaUrlChange()" />
+      <p class="figma-url-hint">Paste any Figma file or node URL to fetch its design data directly.</p>
+    </div>
+
+    <!-- Source Indicator -->
+    <div class="source-indicator" id="sourceIndicator"></div>
+
     <!-- Selection Info -->
     <div class="selection-card" id="selectionCard">
       <div class="selection-empty" id="selectionEmpty">
@@ -516,6 +598,7 @@
   // ── State ──────────────────────────────────────────────────────────────────
 
   let apiKey = '';
+  let figmaToken = '';
   let currentSelection = null;
   let currentFocus = 'auto';
   let isLoading = false;
@@ -577,11 +660,30 @@ Format your response using markdown headings (##) and bullet points. Keep the to
         updateApiKeyUI();
         updateAnalyzeButton();
         break;
+
+      case 'FIGMA_TOKEN_LOADED':
+        figmaToken = msg.key || '';
+        updateFigmaTokenUI();
+        updateAnalyzeButton();
+        break;
+
+      case 'FIGMA_TOKEN_SAVED':
+        updateFigmaTokenUI();
+        updateAnalyzeButton();
+        closeFigmaSection();
+        break;
+
+      case 'FIGMA_TOKEN_DELETED':
+        figmaToken = '';
+        updateFigmaTokenUI();
+        updateAnalyzeButton();
+        break;
     }
   };
 
-  // Request API key on load
+  // Request keys on load
   parent.postMessage({ pluginMessage: { type: 'GET_API_KEY' } }, '*');
+  parent.postMessage({ pluginMessage: { type: 'GET_FIGMA_TOKEN' } }, '*');
 
   // ── UI Updates ─────────────────────────────────────────────────────────────
 
@@ -642,7 +744,23 @@ Format your response using markdown headings (##) and bullet points. Keep the to
     const btn = document.getElementById('analyzeBtn');
     const hasKey = !!apiKey;
     const hasSelection = currentSelection && currentSelection.hasSelection;
-    btn.disabled = !hasKey || !hasSelection || isLoading;
+    const figmaUrl = document.getElementById('figmaUrlInput')?.value.trim() || '';
+    const hasFigmaUrl = !!figmaToken && !!figmaUrl;
+    btn.disabled = !hasKey || (!hasSelection && !hasFigmaUrl) || isLoading;
+    updateSourceIndicator(hasSelection, hasFigmaUrl, figmaUrl);
+  }
+
+  function updateSourceIndicator(hasSelection, hasFigmaUrl, figmaUrl) {
+    const el = document.getElementById('sourceIndicator');
+    if (hasFigmaUrl) {
+      el.textContent = 'Source: Figma REST API — ' + (figmaUrl.length > 45 ? figmaUrl.slice(0, 45) + '…' : figmaUrl);
+      el.className = 'source-indicator visible rest';
+    } else if (hasSelection) {
+      el.textContent = 'Source: current Figma selection';
+      el.className = 'source-indicator visible';
+    } else {
+      el.className = 'source-indicator';
+    }
   }
 
   // ── API Key Actions ────────────────────────────────────────────────────────
@@ -666,6 +784,153 @@ Format your response using markdown headings (##) and bullet points. Keep the to
   function deleteApiKey() {
     apiKey = '';
     parent.postMessage({ pluginMessage: { type: 'DELETE_API_KEY' } }, '*');
+  }
+
+  // ── Figma Token Actions ────────────────────────────────────────────────────
+
+  function toggleFigmaSection() {
+    document.getElementById('figmaSection').classList.toggle('open');
+  }
+
+  function closeFigmaSection() {
+    document.getElementById('figmaSection').classList.remove('open');
+  }
+
+  function updateFigmaTokenUI() {
+    const dot = document.getElementById('figmaStatusDot');
+    const label = document.getElementById('figmaToggleLabel');
+    const display = document.getElementById('figmaTokenDisplay');
+    const input = document.getElementById('figmaTokenInput');
+    const deleteBtn = document.getElementById('deleteFigmaTokenBtn');
+    const urlSection = document.getElementById('figmaUrlSection');
+
+    if (figmaToken) {
+      dot.className = 'api-status-dot active';
+      label.textContent = 'Figma API connected';
+      display.style.display = 'block';
+      display.textContent = figmaToken.slice(0, 8) + '••••••••' + figmaToken.slice(-4);
+      input.value = '';
+      deleteBtn.style.display = 'inline-block';
+      urlSection.style.display = 'flex';
+    } else {
+      dot.className = 'api-status-dot';
+      label.textContent = 'Connect Figma API (optional)';
+      display.style.display = 'none';
+      deleteBtn.style.display = 'none';
+      urlSection.style.display = 'none';
+      document.getElementById('figmaUrlInput').value = '';
+    }
+  }
+
+  function saveFigmaToken() {
+    const input = document.getElementById('figmaTokenInput');
+    const token = input.value.trim();
+    if (!token) return;
+    figmaToken = token;
+    parent.postMessage({ pluginMessage: { type: 'SAVE_FIGMA_TOKEN', key: token } }, '*');
+  }
+
+  function deleteFigmaToken() {
+    figmaToken = '';
+    parent.postMessage({ pluginMessage: { type: 'DELETE_FIGMA_TOKEN' } }, '*');
+  }
+
+  function onFigmaUrlChange() {
+    updateAnalyzeButton();
+  }
+
+  // ── Figma REST API ─────────────────────────────────────────────────────────
+
+  function parseFigmaUrl(url) {
+    const keyMatch = url.match(/figma\.com\/(?:file|design)\/([a-zA-Z0-9]+)/);
+    if (!keyMatch) return null;
+    const fileKey = keyMatch[1];
+    const nodeIdMatch = url.match(/node-id=([^&\s]+)/);
+    const nodeId = nodeIdMatch ? decodeURIComponent(nodeIdMatch[1]).replace(/-/g, ':') : null;
+    return { fileKey, nodeId };
+  }
+
+  function apiRgbToHex(color) {
+    const r = Math.round(color.r * 255).toString(16).padStart(2, '0');
+    const g = Math.round(color.g * 255).toString(16).padStart(2, '0');
+    const b = Math.round(color.b * 255).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+  }
+
+  function serializeFigmaApiNode(node, depth = 0) {
+    const ind = '  '.repeat(depth);
+    const ind1 = '  '.repeat(depth + 1);
+    const bb = node.absoluteBoundingBox || {};
+    let text = `${ind}[${node.type}] "${node.name}" — ${Math.round(bb.width || 0)}×${Math.round(bb.height || 0)}px`;
+
+    if (node.fills && node.fills.length > 0) {
+      const fills = node.fills
+        .filter(f => f.type === 'SOLID' && f.visible !== false)
+        .map(f => {
+          const hex = apiRgbToHex(f.color);
+          const op = f.opacity !== undefined ? f.opacity : 1;
+          return hex + (op < 1 ? ` (${Math.round(op * 100)}%)` : '');
+        }).join(', ');
+      if (fills) text += `\n${ind1}fills: ${fills}`;
+    }
+
+    if (node.layoutMode && node.layoutMode !== 'NONE') {
+      text += `\n${ind1}layout: ${node.layoutMode}, gap: ${node.itemSpacing || 0}px, padding: ${node.paddingTop || 0}/${node.paddingRight || 0}/${node.paddingBottom || 0}/${node.paddingLeft || 0}px`;
+    }
+
+    if (node.type === 'TEXT' && node.style) {
+      const s = node.style;
+      text += `\n${ind1}font: ${s.fontFamily} ${s.fontWeight || ''} ${s.fontSize}px, line-height: ${s.lineHeightPx ? s.lineHeightPx + 'px' : 'auto'}`;
+      if (node.characters) {
+        const chars = node.characters;
+        text += `\n${ind1}text: "${chars.slice(0, 100)}${chars.length > 100 ? '…' : ''}"`;
+      }
+    }
+
+    if (node.cornerRadius) text += `\n${ind1}corner-radius: ${node.cornerRadius}`;
+    if (node.opacity !== undefined && node.opacity < 1) text += `\n${ind1}opacity: ${Math.round(node.opacity * 100)}%`;
+
+    if (depth < 2 && node.children && node.children.length > 0) {
+      text += '\n' + node.children.slice(0, 20).map(c => serializeFigmaApiNode(c, depth + 1)).join('\n');
+    }
+
+    return text;
+  }
+
+  async function fetchAndSerializeFigmaUrl(url) {
+    const parsed = parseFigmaUrl(url);
+    if (!parsed) throw new Error('Invalid Figma URL. Expected https://www.figma.com/design/… or /file/…');
+
+    const { fileKey, nodeId } = parsed;
+    const endpoint = nodeId
+      ? `https://api.figma.com/v1/files/${fileKey}/nodes?ids=${encodeURIComponent(nodeId)}`
+      : `https://api.figma.com/v1/files/${fileKey}`;
+
+    const res = await fetch(endpoint, { headers: { 'X-Figma-Token': figmaToken } });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.err || `Figma API error ${res.status}`);
+    }
+
+    const data = await res.json();
+    let nodes = [];
+
+    if (nodeId) {
+      // /nodes endpoint: { nodes: { "id": { document: {...} } } }
+      nodes = Object.values(data.nodes || {}).map(n => n.document).filter(Boolean);
+    } else {
+      // /files endpoint: { document: { children: [...] } } — take top-level canvas children
+      const canvas = (data.document?.children || []).filter(c => c.type === 'CANVAS');
+      nodes = canvas.flatMap(c => c.children || []).slice(0, 5);
+    }
+
+    if (nodes.length === 0) throw new Error('No nodes found at that URL.');
+
+    return {
+      source: 'figma-api',
+      nodes: nodes.map(n => serializeFigmaApiNode(n)).join('\n\n'),
+      summary: `${nodes.length} node${nodes.length > 1 ? 's' : ''} from Figma REST API`,
+    };
   }
 
   // ── Focus Selection ────────────────────────────────────────────────────────
@@ -739,14 +1004,35 @@ Provide a structured critique following your format.`;
   // ── Run Critique ───────────────────────────────────────────────────────────
 
   async function runCritique() {
-    if (isLoading || !apiKey || !currentSelection || !currentSelection.hasSelection) return;
+    const figmaUrlValue = document.getElementById('figmaUrlInput')?.value.trim() || '';
+    const hasFigmaUrl = !!figmaToken && !!figmaUrlValue;
+
+    if (isLoading || !apiKey) return;
+    if (!hasFigmaUrl && (!currentSelection || !currentSelection.hasSelection)) return;
 
     setLoadingState(true);
     hideError();
     clearResults();
 
     try {
-      const prompt = buildPrompt(currentSelection, currentFocus);
+      let prompt;
+
+      if (hasFigmaUrl) {
+        const fetched = await fetchAndSerializeFigmaUrl(figmaUrlValue);
+        prompt = `Please critique the following Figma design.
+
+Focus: ${{ auto: 'Analyze all relevant design dimensions: UI/UX, visual design, and structural choices.', ux: 'Focus specifically on UI/UX: clarity, user flow, interactions, feedback states, accessibility.', visual: 'Focus specifically on visual design: colors, typography, spacing, layout, visual hierarchy.', architecture: 'Focus specifically on component architecture: naming, hierarchy, reusability, consistency with design system patterns.' }[currentFocus] || ''}
+
+Source: ${fetched.summary}
+
+## Design Data
+
+${fetched.nodes}
+
+Provide a structured critique following your format.`;
+      } else {
+        prompt = buildPrompt(currentSelection, currentFocus);
+      }
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
