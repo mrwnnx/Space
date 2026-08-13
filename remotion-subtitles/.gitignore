@@ -1,0 +1,11 @@
+node_modules/
+out/
+whisper.cpp/
+.tmp-audio-16k.wav
+# Vidéos sources (trop lourdes pour git) — déposez-les ici localement
+public/*.mp4
+public/*.mov
+public/*.MOV
+public/*.mkv
+public/*.webm
+.DS_Store
