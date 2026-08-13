@@ -1,0 +1,32 @@
+{
+  "name": "remotion-subtitles",
+  "version": "1.0.0",
+  "description": "Ajoute des sous-titres en derja tunisien (lettres latines, police Pangolin) sur une vidéo avec Remotion.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio",
+    "studio": "remotion studio",
+    "render": "remotion render Subtitled out/video.mp4",
+    "cut-silence": "node scripts/cut-silence.mjs",
+    "transcribe": "node scripts/transcribe.mjs",
+    "latinize": "node scripts/translate-to-latin.mjs",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/captions": "^4.0.0",
+    "@remotion/cli": "^4.0.0",
+    "@remotion/google-fonts": "^4.0.0",
+    "@remotion/install-whisper-cpp": "^4.0.0",
+    "@remotion/media-parser": "^4.0.0",
+    "@remotion/media-utils": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.4.0"
+  }
+}
