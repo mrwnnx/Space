@@ -1,0 +1,248 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Space+Grotesk:wght@400;500;700&display=swap">
+  <style>
+    body { margin: 0; font-family: "Space Grotesk", "Helvetica Neue", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #FF4A1C; text-decoration: none; }
+    a:hover { color: #C4310D; }
+    button { font: inherit; border: 0; background: none; padding: 0; cursor: pointer; color: inherit; }
+    .rail { overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+    .rail::-webkit-scrollbar { display: none; }
+    .feed { overflow-y: auto; scrollbar-width: none; }
+    .feed::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; overflow: hidden; display: flex; flex-direction: column; background: #FFF6EC; color: #1A1410; position: relative">
+
+  <!-- Header: nothing is drawn in the top 44px, that belt belongs to the real status bar -->
+  <div style="flex: 0 0 auto; padding: 52px 20px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #FFF6EC">
+    <button style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 44px; justify-content: center">
+      <span style="font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #8A7B6E">Deliver to</span>
+      <span style="display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; color: #1A1410">
+        14 Rue des Halles
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1A1410" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </span>
+    </button>
+
+    <button onClick="{{ openCart }}" style="position: relative; width: 48px; height: 48px; border-radius: 16px; background: #1A1410; display: flex; align-items: center; justify-content: center; flex: 0 0 auto">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFF6EC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 7v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-3-5z"></path><path d="M3 7h18"></path><path d="M16 11a4 4 0 0 1-8 0"></path></svg>
+      <sc-if value="{{ hasCart }}" hint-placeholder-val="{{ true }}">
+        <span style="position: absolute; top: -6px; right: -6px; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; background: {{accent}}; color: #FFFFFF; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 3px solid #FFF6EC; box-sizing: border-box">{{ cartCount }}</span>
+      </sc-if>
+    </button>
+  </div>
+
+  <!-- Scrolling body -->
+  <div class="feed" style="flex: 1 1 auto; overflow-y: auto; padding-bottom: 28px">
+
+    <div style="padding: 4px 20px 18px">
+      <p style="margin: 0 0 4px; font-size: 15px; font-weight: 500; color: #8A7B6E">Hey Sam,</p>
+      <h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Trebuchet MS', system-ui, sans-serif; font-size: 36px; line-height: 0.98; font-weight: 800; letter-spacing: -0.035em; text-wrap: pretty">what are we<br>eating tonight?</h1>
+    </div>
+
+    <div style="padding: 0 20px 18px">
+      <div style="display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 16px; border-radius: 18px; background: #FFFFFF; border: 2px solid #1A1410">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A7B6E" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span style="font-size: 16px; color: #8A7B6E">Search dishes, places, cravings</span>
+      </div>
+    </div>
+
+    <div class="rail" style="padding: 0 20px 22px">
+      <div style="display: flex; gap: 10px; width: max-content">
+        <sc-for list="{{ cats }}" as="cat" hint-placeholder-count="5">
+          <button onClick="{{ cat.pick }}" style="height: 46px; padding: 0 18px; border-radius: 23px; font-size: 15px; font-weight: 700; white-space: nowrap; background: {{cat.bg}}; color: {{cat.fg}}; border: 2px solid {{cat.border}}">{{ cat.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-if value="{{ showPromo }}" hint-placeholder-val="{{ true }}">
+      <div style="padding: 0 20px 26px">
+        <div style="position: relative; overflow: hidden; border-radius: 24px; background: {{accent}}; padding: 22px 20px; border: 2px solid #1A1410">
+          <div style="position: absolute; right: -34px; top: -34px; width: 148px; height: 148px; border-radius: 50%; background: rgba(255,255,255,0.16)"></div>
+          <p style="margin: 0 0 6px; font-family: 'Bricolage Grotesque', 'Trebuchet MS', system-ui, sans-serif; font-size: 26px; line-height: 1.02; font-weight: 800; letter-spacing: -0.03em; color: #FFFFFF; position: relative">Free delivery,<br>all week long</p>
+          <p style="margin: 0 0 16px; font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.86); position: relative">On orders over [MIN SPEND] · ends Sunday</p>
+          <button style="position: relative; height: 44px; padding: 0 22px; border-radius: 22px; background: #1A1410; color: #FFF6EC; font-size: 15px; font-weight: 700">Claim offer</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 20px 14px">
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Trebuchet MS', system-ui, sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.02em">Order it again</h2>
+      <a href="#" style="font-size: 14px; font-weight: 700; color: {{accent}}">See all</a>
+    </div>
+
+    <div class="rail" style="padding: 0 20px 30px">
+      <div style="display: flex; gap: 12px; width: max-content">
+        <sc-for list="{{ again }}" as="dish" hint-placeholder-count="3">
+          <div style="width: 232px; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 20px; background: #FFFFFF; border: 2px solid #EADCCB">
+            <div style="width: 52px; height: 52px; border-radius: 14px; flex: 0 0 auto; background: {{dish.block}}"></div>
+            <div style="flex: 1 1 auto; min-width: 0">
+              <p style="margin: 0 0 2px; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ dish.name }}</p>
+              <p style="margin: 0; font-size: 13px; color: #8A7B6E">{{ dish.meta }}</p>
+            </div>
+            <button onClick="{{ dish.add }}" style="width: 44px; height: 44px; border-radius: 14px; flex: 0 0 auto; background: {{accent}}; display: flex; align-items: center; justify-content: center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            </button>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 20px 14px">
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', 'Trebuchet MS', system-ui, sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.02em">{{ feedTitle }}</h2>
+      <span style="font-size: 14px; font-weight: 500; color: #8A7B6E">{{ feedCount }}</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 18px; padding: 0 20px">
+      <sc-for list="{{ places }}" as="place" hint-placeholder-count="3">
+        <div style="border-radius: 24px; overflow: hidden; background: #FFFFFF; border: 2px solid #1A1410">
+          <div style="position: relative; height: 138px; overflow: hidden; background: {{place.block}}">
+            <div style="position: absolute; right: -30px; top: -46px; width: 150px; height: 150px; border-radius: 50%; background: {{place.tint}}"></div>
+            <span style="position: absolute; left: 14px; bottom: -12px; font-family: 'Bricolage Grotesque', 'Trebuchet MS', system-ui, sans-serif; font-size: 68px; font-weight: 800; letter-spacing: -0.05em; line-height: 1; white-space: nowrap; color: {{place.word}}">{{ place.cuisine }}</span>
+            <span style="position: absolute; left: 14px; top: 14px; height: 30px; padding: 0 12px; border-radius: 15px; background: #FFF6EC; color: #1A1410; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center">{{ place.badge }}</span>
+            <button onClick="{{ place.fav }}" style="position: absolute; right: 10px; top: 10px; width: 44px; height: 44px; border-radius: 22px; background: rgba(255,246,236,0.92); display: flex; align-items: center; justify-content: center">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="{{place.heartFill}}" stroke="{{place.heartStroke}}" stroke-width="2.2" stroke-linejoin="round"><path d="M12 20.5 4.2 13a4.8 4.8 0 0 1 6.8-6.8l1 1 1-1A4.8 4.8 0 1 1 19.8 13z"></path></svg>
+            </button>
+          </div>
+          <div style="padding: 14px 16px 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px">
+            <div style="min-width: 0">
+              <p style="margin: 0 0 5px; font-family: 'Bricolage Grotesque', 'Trebuchet MS', system-ui, sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ place.name }}</p>
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #6E6157">
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: #1A1410">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#1A1410"><path d="m12 3 2.6 5.8 6.4.7-4.8 4.3 1.3 6.2L12 17l-5.5 3 1.3-6.2L3 9.5l6.4-.7z"></path></svg>
+                  {{ place.rating }}
+                </span>
+                <span>·</span><span>{{ place.dist }}</span><span>·</span><span>{{ place.fee }}</span>
+              </div>
+            </div>
+            <span style="flex: 0 0 auto; font-size: 14px; font-weight: 700; color: {{accent}}">{{ place.from }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- Tab bar -->
+  <div style="flex: 0 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: 10px 12px 26px; background: #FFFFFF; border-top: 2px solid #1A1410">
+    <button onClick="{{ nav.goHome }}" style="height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: {{nav.homeColor}}">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{nav.homeColor}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5.5 9.5V20h13V9.5"></path></svg>
+      <span style="font-size: 11px; font-weight: 700">Home</span>
+    </button>
+    <button onClick="{{ nav.goSearch }}" style="height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: {{nav.searchColor}}">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{nav.searchColor}}" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+      <span style="font-size: 11px; font-weight: 700">Search</span>
+    </button>
+    <button onClick="{{ nav.goOrders }}" style="height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: {{nav.ordersColor}}">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{nav.ordersColor}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9.5 8.5h5M9.5 12.5h5"></path></svg>
+      <span style="font-size: 11px; font-weight: 700">Orders</span>
+    </button>
+    <button onClick="{{ nav.goAccount }}" style="height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: {{nav.accountColor}}">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{nav.accountColor}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.8"></circle><path d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4s6.1 1.8 7.5 5.4"></path></svg>
+      <span style="font-size: 11px; font-weight: 700">Account</span>
+    </button>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#FF4A1C","options":["#FF4A1C","#0FB39A","#7B3FF2","#1A1410"]},"showPromo":{"editor":"boolean","default":true},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { cat: 'all', cart: 0, tab: 'home', favs: { kaisen: true } };
+  }
+
+  renderVals() {
+    const accent = this.props.accent ?? '#FF4A1C';
+    const ink = '#1A1410';
+
+    const cats = [
+      { id: 'all', label: 'All' },
+      { id: 'pizza', label: 'Pizza' },
+      { id: 'sushi', label: 'Sushi' },
+      { id: 'burgers', label: 'Burgers' },
+      { id: 'tacos', label: 'Tacos' },
+      { id: 'bowls', label: 'Bowls' },
+      { id: 'sweets', label: 'Sweets' }
+    ].map((c) => {
+      const on = this.state.cat === c.id;
+      return {
+        id: c.id,
+        label: c.label,
+        bg: on ? ink : '#FFFFFF',
+        fg: on ? '#FFF6EC' : ink,
+        border: on ? ink : '#EADCCB',
+        pick: () => this.setState({ cat: c.id })
+      };
+    });
+
+    const all = [
+      { id: 'nonna', name: 'Nonna Vito', cat: 'pizza', cuisine: 'PIZZA', block: '#FFC93C', word: '#7A4A00', tint: 'rgba(122,74,0,0.12)', badge: '25-35 min', rating: '4.8', dist: '1.2 km', fee: 'Free delivery', from: 'from $11' },
+      { id: 'kaisen', name: 'Kaisen Bar', cat: 'sushi', cuisine: 'SUSHI', block: '#0FB39A', word: '#04352D', tint: 'rgba(4,53,45,0.14)', badge: '30-40 min', rating: '4.9', dist: '2.4 km', fee: '$2.50 delivery', from: 'from $16' },
+      { id: 'patty', name: 'Patty Social', cat: 'burgers', cuisine: 'BURGERS', block: '#2F6BFF', word: '#08205C', tint: 'rgba(8,32,92,0.16)', badge: '15-25 min', rating: '4.6', dist: '0.8 km', fee: 'Free delivery', from: 'from $9' },
+      { id: 'dona', name: 'La Doña', cat: 'tacos', cuisine: 'TACOS', block: '#F45D9C', word: '#5A0F32', tint: 'rgba(90,15,50,0.14)', badge: '20-30 min', rating: '4.7', dist: '1.9 km', fee: '$1.90 delivery', from: 'from $8' },
+      { id: 'green', name: 'Green Room', cat: 'bowls', cuisine: 'BOWLS', block: '#7BD44A', word: '#22450C', tint: 'rgba(34,69,12,0.14)', badge: '15-25 min', rating: '4.5', dist: '1.1 km', fee: 'Free delivery', from: 'from $12' },
+      { id: 'slice', name: 'Slice Club', cat: 'pizza', cuisine: 'PIZZA', block: '#1A1410', word: '#FFC93C', tint: 'rgba(255,201,60,0.14)', badge: '20-30 min', rating: '4.4', dist: '0.6 km', fee: '$1.50 delivery', from: 'from $7' },
+      { id: 'sugar', name: 'Sugar Feint', cat: 'sweets', cuisine: 'SWEETS', block: '#9B6BFF', word: '#2B0B60', tint: 'rgba(43,11,96,0.16)', badge: '25-35 min', rating: '4.8', dist: '2.0 km', fee: '$2.00 delivery', from: 'from $6' }
+    ];
+
+    const places = all
+      .filter((p) => this.state.cat === 'all' || p.cat === this.state.cat)
+      .map((p) => {
+        const liked = !!this.state.favs[p.id];
+        return Object.assign({}, p, {
+          heartFill: liked ? accent : 'none',
+          heartStroke: liked ? accent : ink,
+          fav: () => {
+            const favs = Object.assign({}, this.state.favs);
+            favs[p.id] = !favs[p.id];
+            this.setState({ favs: favs });
+          }
+        });
+      });
+
+    const again = [
+      { id: 'a1', name: 'Margherita, extra basil', meta: 'Nonna Vito · $13.50', block: '#FFC93C' },
+      { id: 'a2', name: 'Spicy tuna roll x2', meta: 'Kaisen Bar · $22.00', block: '#0FB39A' },
+      { id: 'a3', name: 'Double smash + fries', meta: 'Patty Social · $15.00', block: '#2F6BFF' }
+    ].map((d) => Object.assign({}, d, { add: () => this.setState({ cart: this.state.cart + 1 }) }));
+
+    const tabColor = (id) => (this.state.tab === id ? accent : '#9A8C7E');
+    const activeCat = cats.find((c) => c.id === this.state.cat);
+
+    return {
+      accent: accent,
+      showPromo: this.props.showPromo ?? true,
+      cartCount: this.state.cart,
+      hasCart: this.state.cart > 0,
+      openCart: () => this.setState({ cart: this.state.cart }),
+      cats: cats,
+      places: places,
+      again: again,
+      feedTitle: this.state.cat === 'all' ? 'Near you' : activeCat.label + ' near you',
+      feedCount: places.length === 1 ? '1 place' : places.length + ' places',
+      nav: {
+        homeColor: tabColor('home'),
+        searchColor: tabColor('search'),
+        ordersColor: tabColor('orders'),
+        accountColor: tabColor('account'),
+        goHome: () => this.setState({ tab: 'home' }),
+        goSearch: () => this.setState({ tab: 'search' }),
+        goOrders: () => this.setState({ tab: 'orders' }),
+        goAccount: () => this.setState({ tab: 'account' })
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
